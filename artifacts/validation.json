@@ -1,0 +1,327 @@
+{
+  "generated_at": "2026-08-31T14:07:40+00:00",
+  "seed": 42,
+  "summary": {
+    "checks": 31,
+    "passed": 26,
+    "failed": 1,
+    "known_limitations": 4
+  },
+  "groups": [
+    {
+      "name": "dataset",
+      "purpose": "The generated events are reproducible and internally consistent.",
+      "checks": [
+        {
+          "id": "determinism",
+          "group": "dataset",
+          "claim": "Rebuilding the dataset with the same seed reproduces it byte for byte.",
+          "expected": "sha256[:16] == c8222d99ff1a7464",
+          "observed": "sha256[:16] == c8222d99ff1a7464",
+          "status": "pass",
+          "detail": "Two independent generator runs in this process were hashed and compared."
+        },
+        {
+          "id": "referential_integrity",
+          "group": "dataset",
+          "claim": "Every event points at a user and an item that exist in the catalog.",
+          "expected": "0 orphan events",
+          "observed": "0 orphan events",
+          "status": "pass",
+          "detail": ""
+        },
+        {
+          "id": "no_repeat_exposure",
+          "group": "dataset",
+          "claim": "A learner never interacts with the same item twice.",
+          "expected": "0 duplicate (user, item) pairs",
+          "observed": "0 duplicate pairs",
+          "status": "pass",
+          "detail": "The simulator draws without replacement. Real logs repeat, so repeat-exposure handling is untested by this dataset."
+        },
+        {
+          "id": "global_time_order",
+          "group": "dataset",
+          "claim": "The event log is stored in chronological order.",
+          "expected": "0 out-of-order adjacent pairs",
+          "observed": "0 out-of-order pairs",
+          "status": "pass",
+          "detail": ""
+        },
+        {
+          "id": "action_mix",
+          "group": "dataset",
+          "claim": "All four implicit actions occur often enough to be learnable.",
+          "expected": "each action >= 5% of events",
+          "observed": "rarest is 'dismiss' at 21.4% ({'complete': 599, 'open': 608, 'save': 504, 'dismiss': 465})",
+          "status": "pass",
+          "detail": ""
+        },
+        {
+          "id": "uniform_activity",
+          "group": "dataset",
+          "claim": "Every learner contributes the same number of events.",
+          "expected": "1 distinct per-user event count",
+          "observed": "1 distinct counts [34]",
+          "status": "pass",
+          "detail": "Uniform activity is a simulator artifact. Real traffic is heavy-tailed, so this dataset cannot exercise sparse-user behaviour."
+        }
+      ]
+    },
+    {
+      "name": "split",
+      "purpose": "The three time windows are disjoint, ordered, and free of item leakage.",
+      "checks": [
+        {
+          "id": "partition_is_exact",
+          "group": "split",
+          "claim": "The three windows partition the event log with no overlap and no loss.",
+          "expected": "0 shared events, 2176 events covered",
+          "observed": "0 shared events, 2176 events covered",
+          "status": "pass",
+          "detail": ""
+        },
+        {
+          "id": "chronological_per_user",
+          "group": "split",
+          "claim": "For every learner, history precedes ranker fit, which precedes evaluation.",
+          "expected": "0 users with a time inversion",
+          "observed": "0 users with a time inversion",
+          "status": "pass",
+          "detail": "This is the check that would catch training on the future."
+        },
+        {
+          "id": "no_item_leakage",
+          "group": "split",
+          "claim": "No item scored in the frozen window was already interacted with in history.",
+          "expected": "0 leaked items",
+          "observed": "0 leaked items",
+          "status": "pass",
+          "detail": ""
+        },
+        {
+          "id": "ratio_holds",
+          "group": "split",
+          "claim": "The split lands on 60 / 20 / 20 of each learner's stream.",
+          "expected": "0.60 / 0.20 / 0.20 (+-2pp)",
+          "observed": "0.5882 / 0.2059 / 0.2059",
+          "status": "pass",
+          "detail": ""
+        },
+        {
+          "id": "trending_uses_history_only",
+          "group": "split",
+          "claim": "The trending signal is built from history events only.",
+          "expected": "0 history events after the cutoff",
+          "observed": "0 events after 2026-06-02T11:00:00+00:00",
+          "status": "pass",
+          "detail": ""
+        }
+      ]
+    },
+    {
+      "name": "features",
+      "purpose": "The matrix handed to the ranker is finite, bounded, and carries signal.",
+      "checks": [
+        {
+          "id": "matrix_is_finite",
+          "group": "features",
+          "claim": "The ranker never sees NaN or infinity.",
+          "expected": "0 non-finite cells",
+          "observed": "0 non-finite cells of 6736",
+          "status": "pass",
+          "detail": ""
+        },
+        {
+          "id": "features_bounded",
+          "group": "features",
+          "claim": "Every feature stays inside [0, 1] before standardisation.",
+          "expected": "0 out-of-range cells",
+          "observed": "0 out-of-range cells",
+          "status": "pass",
+          "detail": ""
+        },
+        {
+          "id": "label_balance",
+          "group": "features",
+          "claim": "The fit set is not degenerate after negative sampling.",
+          "expected": "positive rate in [0.15, 0.45]",
+          "observed": "0.2340 over 842 rows",
+          "status": "pass",
+          "detail": ""
+        },
+        {
+          "id": "features_vary",
+          "group": "features",
+          "claim": "Each feature actually varies across the fit set.",
+          "expected": "every feature spans >= 0.30",
+          "observed": "narrow: {'editorial quality': 0.185}",
+          "status": "known",
+          "detail": "A feature with almost no spread cannot separate classes no matter what coefficient it receives."
+        },
+        {
+          "id": "features_carry_weight",
+          "group": "features",
+          "claim": "Every feature earns a non-trivial coefficient.",
+          "expected": "every |coefficient| >= 0.03",
+          "observed": "inert: {'editorial quality': 0.0211, 'popularity': 0.0105}",
+          "status": "known",
+          "detail": "Inert features are kept because they are cheap and would matter on a catalog with real variance, but they are not doing work on this dataset."
+        }
+      ]
+    },
+    {
+      "name": "model",
+      "purpose": "The ranker is measured on data it did not fit, and its score is described honestly.",
+      "checks": [
+        {
+          "id": "beats_random_ordering",
+          "group": "model",
+          "claim": "The ranker orders held-out examples better than chance.",
+          "expected": "5-fold ROC AUC > 0.55",
+          "observed": "0.6402 (Brier 0.2254, 842 rows)",
+          "status": "pass",
+          "detail": "Cross-validated inside the ranker-fit window; the frozen window is untouched."
+        },
+        {
+          "id": "score_is_a_probability",
+          "group": "model",
+          "claim": "The sigmoid output can be read as an engagement probability.",
+          "expected": "|mean score - observed rate| <= 0.05",
+          "observed": "0.2366 (mean score 0.4706 vs rate 0.234)",
+          "status": "known",
+          "detail": "class_weight='balanced' reweights the classes, so the sigmoid output orders candidates but overstates absolute engagement probability. Use it for ordering, not for expected-value maths."
+        },
+        {
+          "id": "explanations_reconstruct_the_score",
+          "group": "model",
+          "claim": "Per-item feature contributions sum back to the logit that produced the score.",
+          "expected": "max reconstruction error < 1e-9",
+          "observed": "max error 8.88e-16",
+          "status": "pass",
+          "detail": ""
+        }
+      ]
+    },
+    {
+      "name": "retrieval",
+      "purpose": "Candidate generation obeys the contracts the slate depends on.",
+      "checks": [
+        {
+          "id": "sources_are_not_redundant",
+          "group": "retrieval",
+          "claim": "The four retrieval routes rank the catalog differently.",
+          "expected": "max |correlation| between any two routes < 0.95",
+          "observed": "0.9007 between content and collaborative",
+          "status": "pass",
+          "detail": "Before trending was time-decayed this pair sat at 0.99, which made one route a duplicate of popularity."
+        },
+        {
+          "id": "seen_items_excluded",
+          "group": "retrieval",
+          "claim": "Items already interacted with never reappear in a slate.",
+          "expected": "0 repeats across the sample",
+          "observed": "0 repeats over 16 learners x 3 policies",
+          "status": "pass",
+          "detail": ""
+        },
+        {
+          "id": "creator_cap_enforced",
+          "group": "retrieval",
+          "claim": "Each policy honours its own creator cap.",
+          "expected": "0 slates over cap",
+          "observed": "0 slates over cap",
+          "status": "pass",
+          "detail": ""
+        },
+        {
+          "id": "slate_size_honored",
+          "group": "retrieval",
+          "claim": "A request for 8 items returns 8 items.",
+          "expected": "0 short slates",
+          "observed": "0 short slates",
+          "status": "pass",
+          "detail": ""
+        },
+        {
+          "id": "candidate_recall_ceiling",
+          "group": "retrieval",
+          "claim": "Retrieval surfaces the frozen-window positives the ranker is asked to find.",
+          "expected": "report the ceiling, target > 0.60",
+          "observed": "0.9111 (82/90 positives reachable)",
+          "status": "pass",
+          "detail": "NDCG@10 cannot exceed this ceiling. Ranking work is wasted on anything retrieval never proposes."
+        }
+      ]
+    },
+    {
+      "name": "evaluation",
+      "purpose": "Published metrics match a live recomputation.",
+      "checks": [
+        {
+          "id": "metrics_in_range",
+          "group": "evaluation",
+          "claim": "Every published metric is inside its mathematically valid range.",
+          "expected": "0 impossible values",
+          "observed": "0 impossible values []",
+          "status": "pass",
+          "detail": ""
+        },
+        {
+          "id": "bootstrap_is_consistent",
+          "group": "evaluation",
+          "claim": "The 95% interval brackets the mean it was resampled from.",
+          "expected": "lower <= mean <= upper",
+          "observed": "[0.0202, 0.1686] around 0.0974",
+          "status": "pass",
+          "detail": ""
+        },
+        {
+          "id": "effect_excludes_zero",
+          "group": "evaluation",
+          "claim": "The ranking gain over popularity is distinguishable from no gain.",
+          "expected": "the 95% interval excludes 0",
+          "observed": "interval [0.0202, 0.1686] excludes 0",
+          "status": "pass",
+          "detail": "62 evaluable learners is a small sample; the interval is wide even when the point estimate is large."
+        },
+        {
+          "id": "artifact_matches_runtime",
+          "group": "evaluation",
+          "claim": "The committed evaluation artifact is what this build actually produces.",
+          "expected": "artifacts/evaluation.json == live report",
+          "observed": "differs from this run",
+          "status": "fail",
+          "detail": "Regenerate with: python -m signalweave.train, which rewrites it as part of registering."
+        },
+        {
+          "id": "served_policies_are_evaluated",
+          "group": "evaluation",
+          "claim": "Every policy the API can serve has frozen-window metrics of its own.",
+          "expected": "0 served policies without metrics",
+          "observed": "0 without metrics []",
+          "status": "pass",
+          "detail": "Otherwise the console would show one policy's slate next to another policy's numbers."
+        },
+        {
+          "id": "challenger_beats_strongest_baseline",
+          "group": "evaluation",
+          "claim": "The promoted challenger outranks the best baseline, not just the weakest one.",
+          "expected": "balanced NDCG@10 >= content (0.2354)",
+          "observed": "balanced 0.2131, margin -0.0223",
+          "status": "known",
+          "detail": "The release gate compares against popularity only. Balanced trades ranking accuracy for slate diversity on purpose, so this gap is a product choice \u2014 but it is a gap, and the gate does not test for it."
+        },
+        {
+          "id": "release_gate_agrees",
+          "group": "evaluation",
+          "claim": "The release status follows from the individual guardrails.",
+          "expected": "status is promote_to_shadow only when every guardrail passes",
+          "observed": "status=promote_to_shadow, failing=none",
+          "status": "pass",
+          "detail": ""
+        }
+      ]
+    }
+  ]
+}

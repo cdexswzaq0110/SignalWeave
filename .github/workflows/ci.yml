@@ -1,0 +1,33 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install
+        run: python -m pip install -e ".[dev]"
+
+      - name: Tests
+        run: python -m pytest -q
+
+      # Exits non-zero on any check with status `fail`, which includes
+      # artifact_matches_runtime: a stale artifacts/evaluation.json fails the build.
+      - name: Data and model checks
+        run: python -m signalweave.validation
+
+      # The registration path is the deployment path, so CI walks it. --no-promote
+      # keeps the run from claiming to be a champion nobody reviewed.
+      - name: Training pipeline
+        run: python -m signalweave.train --no-promote --note "ci verification run"

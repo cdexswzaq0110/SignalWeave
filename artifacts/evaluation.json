@@ -1,0 +1,158 @@
+{
+  "dataset": {
+    "kind": "deterministic synthetic implicit-feedback simulation",
+    "users": 64,
+    "items": 80,
+    "events": 2176,
+    "eligible_evaluation_users": 62,
+    "seed": 42
+  },
+  "training": {
+    "rows": 842,
+    "positive_rate": 0.234,
+    "features": [
+      "content affinity",
+      "collaborative affinity",
+      "topic affinity",
+      "popularity",
+      "freshness",
+      "editorial quality",
+      "difficulty fit",
+      "duration fit"
+    ],
+    "split": "60% representation history / 20% ranker fit / 20% frozen evaluation per user",
+    "cv_folds": 5,
+    "cv_roc_auc": 0.6402,
+    "cv_brier": 0.2254,
+    "mean_held_out_score": 0.4706,
+    "observed_positive_rate": 0.234,
+    "score_is_calibrated": false,
+    "calibration_note": "class_weight='balanced' reweights the classes, so the sigmoid output orders candidates but overstates absolute engagement probability.",
+    "coefficients": [
+      {
+        "feature": "collaborative affinity",
+        "coefficient": 0.292
+      },
+      {
+        "feature": "content affinity",
+        "coefficient": 0.2872
+      },
+      {
+        "feature": "difficulty fit",
+        "coefficient": 0.157
+      },
+      {
+        "feature": "topic affinity",
+        "coefficient": 0.1027
+      },
+      {
+        "feature": "freshness",
+        "coefficient": -0.0721
+      },
+      {
+        "feature": "duration fit",
+        "coefficient": 0.071
+      },
+      {
+        "feature": "editorial quality",
+        "coefficient": 0.0211
+      },
+      {
+        "feature": "popularity",
+        "coefficient": 0.0105
+      }
+    ]
+  },
+  "policies": {
+    "popularity": {
+      "recall_at_10": 0.1973,
+      "ndcg_at_10": 0.1157,
+      "mrr_at_10": 0.1315,
+      "catalog_coverage": 0.25,
+      "intra_list_diversity": 0.8477,
+      "novelty_bits": 5.8864,
+      "creator_hhi": 0.121
+    },
+    "content": {
+      "recall_at_10": 0.3548,
+      "ndcg_at_10": 0.2354,
+      "mrr_at_10": 0.2917,
+      "catalog_coverage": 0.9875,
+      "intra_list_diversity": 0.7686,
+      "novelty_bits": 6.3573,
+      "creator_hhi": 0.1245
+    },
+    "accuracy": {
+      "recall_at_10": 0.3852,
+      "ndcg_at_10": 0.254,
+      "mrr_at_10": 0.3163,
+      "catalog_coverage": 1.0,
+      "intra_list_diversity": 0.8166,
+      "novelty_bits": 6.2806,
+      "creator_hhi": 0.1268
+    },
+    "balanced": {
+      "recall_at_10": 0.3207,
+      "ndcg_at_10": 0.2131,
+      "mrr_at_10": 0.2735,
+      "catalog_coverage": 0.9875,
+      "intra_list_diversity": 0.8691,
+      "novelty_bits": 6.4062,
+      "creator_hhi": 0.131
+    },
+    "discovery": {
+      "recall_at_10": 0.2556,
+      "ndcg_at_10": 0.1757,
+      "mrr_at_10": 0.2435,
+      "catalog_coverage": 0.95,
+      "intra_list_diversity": 0.9248,
+      "novelty_bits": 6.5707,
+      "creator_hhi": 0.1
+    }
+  },
+  "paired_bootstrap": {
+    "metric": "balanced NDCG@10 minus popularity NDCG@10",
+    "mean_delta": 0.0974,
+    "confidence_interval_95": [
+      0.0202,
+      0.1686
+    ],
+    "resamples": 500
+  },
+  "release_gate": {
+    "status": "promote_to_shadow",
+    "challenger": "balanced",
+    "reference": "popularity",
+    "guardrails": [
+      {
+        "id": "ndcg_gain_at_least_2pp",
+        "claim": "Ranking gain over the popularity baseline is at least 2 points of NDCG@10.",
+        "threshold": 0.02,
+        "observed": 0.0974,
+        "passed": true
+      },
+      {
+        "id": "coverage_not_lower_than_popularity",
+        "claim": "The challenger surfaces at least as much of the catalog as the baseline.",
+        "threshold": 0.25,
+        "observed": 0.9875,
+        "passed": true
+      },
+      {
+        "id": "diversity_not_lower_than_popularity",
+        "claim": "Slates are at least as varied as the baseline's.",
+        "threshold": 0.8477,
+        "observed": 0.8691,
+        "passed": true
+      },
+      {
+        "id": "creator_hhi_at_most_0_22",
+        "claim": "No slate concentrates exposure on a few creators.",
+        "threshold": 0.22,
+        "observed": 0.131,
+        "passed": true
+      }
+    ],
+    "note": "Offline simulation supports shadow evaluation only; it is not causal online evidence."
+  }
+}

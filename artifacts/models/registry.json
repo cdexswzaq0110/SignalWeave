@@ -1,0 +1,15 @@
+{
+  "champion": "20260831T140130Z-5455be7e",
+  "history": [
+    {
+      "version": "20260831T140708Z-caa2feb2",
+      "registered_at": "2026-08-31T14:07:08+00:00",
+      "note": "seed sweep: does the result hold off 42"
+    },
+    {
+      "version": "20260831T140130Z-5455be7e",
+      "registered_at": "2026-08-31T14:01:30+00:00",
+      "note": "first registered build after the MLOps split"
+    }
+  ]
+}

@@ -1,0 +1,232 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="SignalWeave — local recommendation console for a deterministic learning-content simulation.">
+  <title>SignalWeave</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%231c1b19'/%3E%3Cpath d='M7 20h4v5H7zM14 12h4v13h-4zM21 16h4v9h-4z' fill='%23fbfaf7'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="/assets/styles.css">
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+
+<header class="masthead">
+  <div class="masthead-title">
+    <h1>SignalWeave</h1>
+    <p>Recommendation console. Deterministic simulation, seed 42. Nothing here is measured on real users.</p>
+  </div>
+  <dl class="build-facts" id="build-facts"></dl>
+</header>
+
+<nav class="tabs" aria-label="Views">
+  <button type="button" data-view="slate" aria-current="page">Slate</button>
+  <button type="button" data-view="policies">Policies</button>
+  <button type="button" data-view="checks">Checks</button>
+  <button type="button" data-view="pipeline">Pipeline</button>
+  <button type="button" data-view="operations">Operations</button>
+</nav>
+
+<main id="main">
+
+  <!-- ─────────────── slate ─────────────── -->
+  <section id="slate-view" class="view">
+    <form class="toolbar" id="toolbar" autocomplete="off">
+      <p class="field">
+        <label for="user-select">Learner</label>
+        <select id="user-select"></select>
+      </p>
+      <fieldset class="field">
+        <legend>Policy</legend>
+        <span class="segmented" id="policy-group">
+          <label><input type="radio" name="policy" value="accuracy" checked> Accuracy <small>champion</small></label>
+          <label><input type="radio" name="policy" value="balanced"> Balanced <small>shadow</small></label>
+          <label><input type="radio" name="policy" value="discovery"> Discovery</label>
+        </span>
+      </fieldset>
+      <p class="field">
+        <label for="limit-input">Slate size</label>
+        <input id="limit-input" type="number" min="1" max="20" step="1" value="8">
+      </p>
+      <p class="field toolbar-end">
+        <button type="button" id="refresh">Recompute</button>
+      </p>
+    </form>
+
+    <p class="funnel-line" id="funnel-line"></p>
+    <p class="funnel-line" id="shadow-line"></p>
+
+    <div class="columns">
+      <div class="column-main">
+        <h2 class="rule">Ranked slate</h2>
+        <p class="hint">Click a row to see how its position was decided. Feedback is written to SQLite and changes the next request.</p>
+        <table class="slate" id="slate-table">
+          <thead>
+            <tr>
+              <th scope="col" class="num">#</th>
+              <th scope="col">Item</th>
+              <th scope="col">Retrieved by</th>
+              <th scope="col" class="num">Utility</th>
+              <th scope="col">Feedback</th>
+            </tr>
+          </thead>
+          <tbody id="slate-body"></tbody>
+        </table>
+      </div>
+
+      <aside class="column-side">
+        <h2 class="rule">Learner</h2>
+        <dl class="facts" id="learner-facts"></dl>
+
+        <h2 class="rule">Retrieval routes</h2>
+        <table class="mini" id="routes-table"></table>
+        <p class="note" id="routes-note"></p>
+
+        <h2 class="rule">Slate constraints</h2>
+        <table class="mini" id="constraints-table"></table>
+      </aside>
+    </div>
+  </section>
+
+  <!-- ─────────────── policies ─────────────── -->
+  <section id="policies-view" class="view" hidden>
+    <h2 class="rule">Frozen-window results <span class="rule-note">K = 10, 62 evaluable learners</span></h2>
+    <p class="hint">Two baselines and three served policies, all scored on the same held-out 20% of each learner's stream. Best value per row is marked.</p>
+    <div class="scroll-x">
+      <table class="matrix" id="matrix-table"></table>
+    </div>
+
+    <div class="columns">
+      <div class="column-main">
+        <h2 class="rule">Release gate</h2>
+        <p class="hint" id="gate-summary"></p>
+        <table class="checks" id="gate-table"></table>
+      </div>
+      <aside class="column-side">
+        <h2 class="rule">Uncertainty</h2>
+        <div id="bootstrap"></div>
+      </aside>
+    </div>
+
+    <h2 class="rule">Ranker</h2>
+    <div class="columns">
+      <div class="column-main">
+        <p class="hint">Coefficients are on standardised features, so they are comparable to each other. Two of the eight carry almost no weight on this catalog; see the checks tab.</p>
+        <table class="mini wide" id="coefficients-table"></table>
+      </div>
+      <aside class="column-side">
+        <dl class="facts" id="ranker-facts"></dl>
+        <p class="note" id="calibration-note"></p>
+      </aside>
+    </div>
+  </section>
+
+  <!-- ─────────────── checks ─────────────── -->
+  <section id="checks-view" class="view" hidden>
+    <h2 class="rule">Data and model checks <span class="rule-note" id="checks-tally"></span></h2>
+    <p class="hint">
+      Every claim below is recomputed against this running process, not copied from a document.
+      <strong>PASS</strong> means the claim holds. <strong>FAIL</strong> means something is wrong.
+      <strong>KNOWN</strong> means the claim does not hold and the reason is a deliberate trade-off,
+      recorded rather than hidden.
+    </p>
+    <div id="checks-groups"></div>
+  </section>
+
+  <!-- ─────────────── pipeline ─────────────── -->
+  <section id="pipeline-view" class="view" hidden>
+    <h2 class="rule">Stages</h2>
+    <ol class="stages" id="stages"></ol>
+
+    <h2 class="rule">Split contract</h2>
+    <div class="split-bar" id="split-bar">
+      <span style="--share:60%"><b>60%</b> representation history</span>
+      <span style="--share:20%"><b>20%</b> ranker fit</span>
+      <span style="--share:20%"><b>20%</b> frozen evaluation</span>
+    </div>
+    <p class="hint">
+      Profiles, popularity, item-item neighbourhoods and the time-decayed trending signal are built
+      from the first window only. The ranker is fit on the second. The gate never touches the third
+      until it scores it. <code>split.chronological_per_user</code> in the checks tab is what would
+      catch a violation.
+    </p>
+
+    <h2 class="rule">Evidence boundary</h2>
+    <div class="boundary">
+      <p>
+        This dataset is generated by a simulator whose preference function is known. That makes the
+        contracts testable and the run reproducible, and it also means the metrics describe the
+        simulator, not people. An offline replay cannot answer what a different ranking would have
+        caused, because the log only contains what the old policy showed.
+      </p>
+      <p>
+        What would move this past a simulation, in order: logged impressions with the ranker version
+        that produced them, propensity-weighted or randomised exploration data, shadow traffic with
+        latency and feature-parity monitoring, then a pre-registered online experiment.
+      </p>
+    </div>
+  </section>
+
+  <!-- ─────────────── operations ─────────────── -->
+  <section id="operations-view" class="view" hidden>
+    <h2 class="rule">Serving <span class="rule-note" id="ops-version"></span></h2>
+    <p class="hint">
+      The API loads a registered model and scores against it. It does not fit one on the request
+      path, and the policy metrics it reports are the ones that model recorded at training time —
+      not a recomputation that happens to run the same code.
+    </p>
+    <div class="columns">
+      <div class="column-main">
+        <table class="checks" id="ops-serving"></table>
+      </div>
+      <aside class="column-side">
+        <dl class="facts" id="ops-environment"></dl>
+        <p class="note" id="ops-note"></p>
+      </aside>
+    </div>
+
+    <h2 class="rule">Registered versions</h2>
+    <p class="hint">
+      Each version keeps a manifest recording its data, code and model digests, its environment, its
+      metrics and its check-suite result. Promotion and rollback are the same operation:
+      <code>python -m signalweave.train --promote VERSION</code>.
+    </p>
+    <div class="scroll-x"><table class="matrix" id="ops-versions"></table></div>
+
+    <div class="columns">
+      <div class="column-main">
+        <h2 class="rule">Shadow deployment</h2>
+        <p class="hint" id="shadow-hint"></p>
+        <table class="mini wide" id="ops-shadow"></table>
+      </div>
+      <aside class="column-side">
+        <h2 class="rule">Request latency</h2>
+        <table class="mini" id="ops-latency"></table>
+        <p class="note">In-process window, reset when the service restarts. Champion requests carry
+        the cost of the shadow slate as well.</p>
+      </aside>
+    </div>
+
+    <h2 class="rule">Drift</h2>
+    <div class="columns">
+      <div class="column-main">
+        <p class="hint" id="drift-hint"></p>
+        <table class="mini wide" id="ops-drift-actions"></table>
+      </div>
+      <aside class="column-side">
+        <table class="checks" id="ops-drift-status"></table>
+      </aside>
+    </div>
+  </section>
+
+</main>
+
+<footer class="colophon">
+  <p id="colophon-line">SignalWeave — local build.</p>
+  <p><a href="/docs">OpenAPI</a> · <a href="/api/evaluation">evaluation.json</a> · <a href="/api/validation">validation.json</a></p>
+</footer>
+
+<p id="toast" class="toast" role="status" aria-live="polite" hidden></p>
+<script src="/assets/app.js" defer></script>
+</body>
+</html>

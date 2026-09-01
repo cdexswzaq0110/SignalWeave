@@ -1,0 +1,36 @@
+# Python
+.venv/
+__pycache__/
+.pytest_cache/
+*.py[cod]
+.env
+
+# 服務執行時產生的本機狀態（feedback 與 shadow log）
+runtime/
+
+# 模型二進位可以重建，manifest 才是紀錄，留在版控裡
+artifacts/*.joblib
+artifacts/models/*/model.joblib
+
+# 開發配置留在本機，不隨本 repo 散布
+.claude/
+
+# 建置中繼資料
+*.egg-info/
+
+# 介面截圖仍是舊版前端，與現在的程式不符。重拍後把這行拿掉再加回來。
+docs/screenshots/
+
+# 領悟帳本的本機草稿（正式 Lesson 要 commit）
+docs/lessons/*.draft.md
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# 編輯器
+.vscode/
+.idea/
+*.swp
+*~
